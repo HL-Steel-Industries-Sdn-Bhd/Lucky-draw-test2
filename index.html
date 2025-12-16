@@ -267,6 +267,7 @@
 
     <script>
         // 奖品配置：名称、概率、颜色
+        // 注意：顺序很重要，需要按照圆饼图的绘制顺序排列
         const prizes = [
             { name: "再来一次", probability: 0.4, color: "#FF6B8B" },
             { name: "二等奖", probability: 0.2, color: "#4ECDC4" },
@@ -305,7 +306,7 @@
             ctx.rotate(rotation * Math.PI / 180);
             ctx.translate(-centerX, -centerY);
             
-            let startAngle = 0;
+            let startAngle = -Math.PI / 2; // 从顶部开始绘制
             
             // 绘制每个扇形
             prizes.forEach((prize, index) => {
@@ -383,7 +384,7 @@
         // 计算奖品在转盘上的停止角度
         function calculateStopAngle(prizeIndex) {
             // 计算该奖品在转盘上的起始角度（累计前面所有奖品的角度）
-            let startAngle = 0;
+            let startAngle = -90; // 从-90度开始（顶部）
             for (let i = 0; i < prizeIndex; i++) {
                 startAngle += prizes[i].probability * 360;
             }
@@ -401,6 +402,32 @@
             return stopAngle;
         }
         
+        // 根据当前旋转角度计算指针指向的奖品
+        function getPrizeFromAngle(angle) {
+            // 标准化角度到0-360度范围
+            let normalizedAngle = (angle % 360 + 360) % 360;
+            
+            // 调整角度，因为转盘是从-90度开始绘制的（顶部）
+            let adjustedAngle = (normalizedAngle + 90) % 360;
+            
+            // 计算每个奖品的角度范围
+            let cumulativeAngle = 0;
+            
+            for (let i = 0; i < prizes.length; i++) {
+                const prizeAngle = prizes[i].probability * 360;
+                
+                // 检查角度是否在当前奖品范围内
+                if (adjustedAngle >= cumulativeAngle && adjustedAngle < cumulativeAngle + prizeAngle) {
+                    return i;
+                }
+                
+                cumulativeAngle += prizeAngle;
+            }
+            
+            // 处理边缘情况（当adjustedAngle正好等于360时）
+            return prizes.length - 1;
+        }
+        
         // 开始旋转
         function startSpin() {
             if (isSpinning) return;
@@ -416,7 +443,7 @@
             
             // 随机选择奖品
             targetPrizeIndex = selectPrizeByProbability();
-            console.log(`本轮奖品: ${prizes[targetPrizeIndex].name}`);
+            console.log(`本轮预设奖品: ${prizes[targetPrizeIndex].name}`);
             
             // 计算停止角度
             const stopAngle = calculateStopAngle(targetPrizeIndex);
@@ -478,6 +505,17 @@
                     // 精确停止到目标角度
                     currentRotation = stopAngle;
                     drawWheel(currentRotation);
+                    
+                    // 验证停止时的奖品
+                    const actualPrizeIndex = getPrizeFromAngle(currentRotation);
+                    console.log(`预设奖品: ${prizes[targetPrizeIndex].name}, 实际指向奖品: ${prizes[actualPrizeIndex].name}`);
+                    
+                    // 确保指针指向正确的奖品
+                    if (actualPrizeIndex !== targetPrizeIndex) {
+                        console.warn('奖品不匹配，进行调整');
+                        targetPrizeIndex = actualPrizeIndex;
+                    }
+                    
                     finishSpin();
                     return;
                 }
