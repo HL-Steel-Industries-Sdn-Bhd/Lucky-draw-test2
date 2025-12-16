@@ -64,9 +64,9 @@
         
         .pointer {
             position: absolute;
-            top: -30px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: -30px; /* 保持在转盘上方 */
+            left: 50%; /* 从中心开始 */
+            transform: translateX(-50%) translateX(-15px); /* 向左偏移15px，使尖头对准中心 */
             width: 40px;
             height: 60px;
             z-index: 10;
@@ -209,12 +209,20 @@
             .prize-info {
                 grid-template-columns: 1fr;
             }
+            
+            .pointer {
+                transform: translateX(-50%) translateX(-10px); /* 在小屏幕上调整偏移量 */
+            }
         }
         
         @media (max-width: 480px) {
             .wheel-container {
                 width: 280px;
                 height: 280px;
+            }
+            
+            .pointer {
+                transform: translateX(-50%) translateX(-8px); /* 在更小的屏幕上调整偏移量 */
             }
         }
     </style>
