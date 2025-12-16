@@ -55,33 +55,11 @@
             height: 500px;
         }
         
-        #wheel {
+        #wheelCanvas {
             width: 100%;
             height: 100%;
             border-radius: 50%;
-            position: relative;
-            overflow: hidden;
             box-shadow: 0 0 0 8px #fff, 0 0 30px rgba(0, 0, 0, 0.2);
-            transition: transform 5s cubic-bezier(0.17, 0.67, 0.21, 0.99);
-            transform: rotate(0deg);
-        }
-        
-        .wheel-sector {
-            position: absolute;
-            width: 50%;
-            height: 50%;
-            transform-origin: 100% 100%;
-            left: 0;
-            top: 0;
-            display: flex;
-            justify-content: flex-start;
-            align-items: center;
-            padding-left: 60px;
-            font-weight: bold;
-            color: white;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-            font-size: 1.2rem;
-            overflow: hidden;
         }
         
         .pointer {
@@ -220,11 +198,6 @@
                 height: 350px;
             }
             
-            .wheel-sector {
-                font-size: 1rem;
-                padding-left: 40px;
-            }
-            
             .container {
                 padding: 20px;
             }
@@ -243,11 +216,6 @@
                 width: 280px;
                 height: 280px;
             }
-            
-            .wheel-sector {
-                font-size: 0.85rem;
-                padding-left: 30px;
-            }
         }
     </style>
 </head>
@@ -257,7 +225,7 @@
         <p class="subtitle">点击开始按钮转动转盘，点击停止按钮停止转盘</p>
         
         <div class="wheel-container">
-            <div id="wheel"></div>
+            <canvas id="wheelCanvas" width="500" height="500"></canvas>
             <div class="pointer"></div>
         </div>
         
@@ -306,53 +274,95 @@
             { name: "一等奖", probability: 0.1, color: "#FFD166" }
         ];
         
-        // 计算每个奖品在转盘上的角度范围
+        // 初始化变量
         let currentRotation = 0;
         let isSpinning = false;
         let isDecelerating = false;
         let spinSpeed = 0;
         let maxSpeed = 25;
         let targetPrizeIndex = -1;
-        let wheel = document.getElementById('wheel');
+        let canvas = document.getElementById('wheelCanvas');
+        let ctx = canvas.getContext('2d');
         let spinButton = document.getElementById('spinButton');
         let resultDisplay = document.getElementById('result');
         let statusDisplay = document.getElementById('status');
+        let animationId = null;
         
-        // 初始化转盘 - 使用canvas绘制圆饼图
-        function initWheel() {
-            wheel.innerHTML = '';
-            let accumulatedAngle = 0;
+        // 绘制转盘
+        function drawWheel(rotation = 0) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(centerX, centerY) - 10;
             
-            // 创建每个扇形区域
+            // 清除画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 保存当前状态
+            ctx.save();
+            
+            // 旋转画布
+            ctx.translate(centerX, centerY);
+            ctx.rotate(rotation * Math.PI / 180);
+            ctx.translate(-centerX, -centerY);
+            
+            let startAngle = 0;
+            
+            // 绘制每个扇形
             prizes.forEach((prize, index) => {
-                const angle = prize.probability * 360;
+                const angle = prize.probability * 2 * Math.PI;
+                const endAngle = startAngle + angle;
                 
-                // 创建扇形元素
-                const sector = document.createElement('div');
-                sector.className = 'wheel-sector';
-                sector.textContent = `${prize.name} (${(prize.probability * 100).toFixed(0)}%)`;
-                sector.style.backgroundColor = prize.color;
-                sector.style.transform = `rotate(${accumulatedAngle}deg) skewY(${angle - 90}deg)`;
+                // 绘制扇形
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
                 
-                // 添加扇形内部文本的容器
-                const textContainer = document.createElement('div');
-                textContainer.style.transform = `skewY(${90 - angle}deg) rotate(${angle/2}deg)`;
-                textContainer.style.width = '100%';
-                textContainer.style.height = '100%';
-                textContainer.style.display = 'flex';
-                textContainer.style.alignItems = 'center';
-                textContainer.style.paddingLeft = '40%';
-                textContainer.textContent = `${prize.name} (${(prize.probability * 100).toFixed(0)}%)`;
-                textContainer.style.color = 'white';
-                textContainer.style.fontWeight = 'bold';
-                textContainer.style.textShadow = '1px 1px 2px rgba(0,0,0,0.5)';
-                textContainer.style.fontSize = '1.2rem';
+                // 填充颜色
+                ctx.fillStyle = prize.color;
+                ctx.fill();
                 
-                sector.appendChild(textContainer);
-                wheel.appendChild(sector);
+                // 添加边框
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
                 
-                accumulatedAngle += angle;
+                // 绘制文字
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + angle / 2);
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 18px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                ctx.shadowBlur = 3;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+                
+                // 计算文字位置
+                const textRadius = radius * 0.7;
+                ctx.fillText(prize.name, textRadius, 0);
+                ctx.font = '16px Arial';
+                ctx.fillText(`${(prize.probability * 100).toFixed(0)}%`, textRadius, 20);
+                
+                ctx.restore();
+                
+                startAngle = endAngle;
             });
+            
+            // 绘制中心圆
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 15, 0, 2 * Math.PI);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // 恢复状态
+            ctx.restore();
         }
         
         // 根据概率随机选择一个奖品
@@ -413,20 +423,32 @@
             
             // 加速阶段
             spinSpeed = 0;
-            let accelerateInterval = setInterval(() => {
-                spinSpeed += 0.8;
+            let lastTime = Date.now();
+            
+            function accelerate() {
+                if (!isSpinning) return;
+                
+                const now = Date.now();
+                const deltaTime = now - lastTime;
+                lastTime = now;
+                
+                spinSpeed += 0.02 * deltaTime;
                 if (spinSpeed >= maxSpeed) {
-                    clearInterval(accelerateInterval);
-                    
-                    // 开始减速的触发由用户点击停止按钮控制
-                    // 这里只设置一个标志，表示可以开始减速了
+                    spinSpeed = maxSpeed;
                     isDecelerating = true;
                     statusDisplay.textContent = '转盘全速旋转中，点击停止按钮...';
+                    return;
                 }
                 
                 currentRotation += spinSpeed;
-                wheel.style.transform = `rotate(${currentRotation}deg)`;
-            }, 16); // 约60fps
+                drawWheel(currentRotation);
+                
+                if (isSpinning) {
+                    animationId = requestAnimationFrame(accelerate);
+                }
+            }
+            
+            animationId = requestAnimationFrame(accelerate);
         }
         
         // 停止旋转
@@ -455,17 +477,20 @@
                     spinSpeed = 0;
                     // 精确停止到目标角度
                     currentRotation = stopAngle;
-                    wheel.style.transform = `rotate(${currentRotation}deg)`;
+                    drawWheel(currentRotation);
                     finishSpin();
                     return;
                 }
                 
                 currentRotation += spinSpeed;
-                wheel.style.transform = `rotate(${currentRotation}deg)`;
-                requestAnimationFrame(decelerate);
+                drawWheel(currentRotation);
+                
+                if (isSpinning) {
+                    animationId = requestAnimationFrame(decelerate);
+                }
             }
             
-            requestAnimationFrame(decelerate);
+            animationId = requestAnimationFrame(decelerate);
             statusDisplay.textContent = '转盘减速中...';
         }
         
@@ -533,8 +558,24 @@
         
         // 页面加载时初始化转盘
         window.addEventListener('load', function() {
-            initWheel();
+            drawWheel();
             statusDisplay.textContent = '就绪 - 点击开始按钮开始抽奖';
+            
+            // 响应式调整Canvas大小
+            function resizeCanvas() {
+                const container = document.querySelector('.wheel-container');
+                const size = Math.min(container.offsetWidth, container.offsetHeight);
+                
+                canvas.width = size;
+                canvas.height = size;
+                drawWheel(currentRotation);
+            }
+            
+            // 初始调整大小
+            resizeCanvas();
+            
+            // 监听窗口大小变化
+            window.addEventListener('resize', resizeCanvas);
         });
     </script>
 </body>
