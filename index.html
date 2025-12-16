@@ -70,17 +70,18 @@
             position: absolute;
             width: 50%;
             height: 50%;
-            transform-origin: bottom right;
+            transform-origin: 100% 100%;
             left: 0;
             top: 0;
             display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding-top: 40px;
+            justify-content: flex-start;
+            align-items: center;
+            padding-left: 60px;
             font-weight: bold;
             color: white;
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
             font-size: 1.2rem;
+            overflow: hidden;
         }
         
         .pointer {
@@ -102,19 +103,6 @@
             border-left: 20px solid transparent;
             border-right: 20px solid transparent;
             border-top: 60px solid #ff4757;
-        }
-        
-        .pointer::after {
-            content: '';
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            background-color: #ff4757;
-            border-radius: 50%;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1;
         }
         
         .controls {
@@ -234,7 +222,7 @@
             
             .wheel-sector {
                 font-size: 1rem;
-                padding-top: 30px;
+                padding-left: 40px;
             }
             
             .container {
@@ -258,7 +246,7 @@
             
             .wheel-sector {
                 font-size: 0.85rem;
-                padding-top: 25px;
+                padding-left: 30px;
             }
         }
     </style>
@@ -330,7 +318,7 @@
         let resultDisplay = document.getElementById('result');
         let statusDisplay = document.getElementById('status');
         
-        // 初始化转盘
+        // 初始化转盘 - 使用canvas绘制圆饼图
         function initWheel() {
             wheel.innerHTML = '';
             let accumulatedAngle = 0;
@@ -338,17 +326,31 @@
             // 创建每个扇形区域
             prizes.forEach((prize, index) => {
                 const angle = prize.probability * 360;
+                
+                // 创建扇形元素
                 const sector = document.createElement('div');
                 sector.className = 'wheel-sector';
-                sector.textContent = `${prize.name}\n${(prize.probability * 100).toFixed(0)}%`;
+                sector.textContent = `${prize.name} (${(prize.probability * 100).toFixed(0)}%)`;
                 sector.style.backgroundColor = prize.color;
-                sector.style.transform = `rotate(${accumulatedAngle}deg)`;
+                sector.style.transform = `rotate(${accumulatedAngle}deg) skewY(${angle - 90}deg)`;
                 
-                // 设置clip-path来创建扇形
-                sector.style.clipPath = `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)`;
-                sector.style.borderRadius = '0 100% 0 0';
+                // 添加扇形内部文本的容器
+                const textContainer = document.createElement('div');
+                textContainer.style.transform = `skewY(${90 - angle}deg) rotate(${angle/2}deg)`;
+                textContainer.style.width = '100%';
+                textContainer.style.height = '100%';
+                textContainer.style.display = 'flex';
+                textContainer.style.alignItems = 'center';
+                textContainer.style.paddingLeft = '40%';
+                textContainer.textContent = `${prize.name} (${(prize.probability * 100).toFixed(0)}%)`;
+                textContainer.style.color = 'white';
+                textContainer.style.fontWeight = 'bold';
+                textContainer.style.textShadow = '1px 1px 2px rgba(0,0,0,0.5)';
+                textContainer.style.fontSize = '1.2rem';
                 
+                sector.appendChild(textContainer);
                 wheel.appendChild(sector);
+                
                 accumulatedAngle += angle;
             });
         }
